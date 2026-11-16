@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Messagerie Pro</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #0f172a; height: 100vh; overflow: hidden; color: #f8fafc; }
+        .app-layout { display: flex; width: 100vw; height: 100vh; }
+
+        .sidebar { width: 320px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; height: 70px; }
+        .sidebar-header h2 { font-size: 1.2rem; font-weight: 600; color: #f8fafc; }
+        .sidebar-header button { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: 0.2s; }
+        .sidebar-header button:hover { background: #dc2626; }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 10px; }
+        
+        .search-box { margin-bottom: 15px; }
+        .search-box input { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #f8fafc; outline: none; font-size: 0.9rem; transition: 0.2s; }
+        .search-box input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        
+        .contact { padding: 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; margin-bottom: 4px; position: relative; }
+        .contact:hover { background: #334155; }
+        .contact.active { background: #4f46e5; }
+        .contact .avatar { width: 42px; height: 42px; background: #334155; color: #cbd5e1; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 600; font-size: 1.1rem; }
+        .contact.active .avatar { background: #818cf8; color: white; }
+        .contact .name { font-weight: 500; color: #e2e8f0; font-size: 0.95rem; }
+        .contact.general .avatar { background: #10b981; color: white; }
+
+        .status-dot { position: absolute; left: 42px; bottom: 12px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #1e293b; }
+        .status-dot.online { background: #10b981; }
+        .status-dot.offline { background: #64748b; }
+        .section-title { padding: 10px 12px; font-size: 0.75rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 10px; }
+
+        .chat-section { flex: 1; display: flex; flex-direction: column; background: #0f172a; }
+        .chat-header { background: #1e293b; padding: 20px; height: 70px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid #334155; }
+        .chat-header h2 { font-size: 1.1rem; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
+        .chat-header .subtitle { font-size: 0.75rem; color: #818cf8; margin-top: 2px; height: 15px; }
+        
+        .chat-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        
+        .message-row { display: flex; width: 100%; }
+        .message-row.mine { justify-content: flex-end; }
+        .message-row.theirs { justify-content: flex-start; }
+        .bubble { max-width: 60%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; position: relative; }
+        .bubble.mine { background: #4f46e5; color: white; border-bottom-right-radius: 2px; }
+        .bubble.theirs { background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-bottom-left-radius: 2px; }
+        .bubble .sender { font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: #818cf8; }
+        .bubble .time { font-size: 0.65rem; text-align: right; margin-top: 6px; opacity: 0.7; }
+
+        .input-area { background: #1e293b; padding: 15px 20px; border-top: 1px solid #334155; display: flex; gap: 12px; align-items: center; }
+        .input-area input { flex: 1; padding: 12px 16px; border: 1px solid #334155; border-radius: 8px; font-size: 0.95rem; outline: none; background: #0f172a; color: #f8fafc; transition: 0.2s; }
+        .input-area input:focus { border-color: #6366f1; }
+        .input-area button { background: #4f46e5; color: white; border: none; border-radius: 8px; padding: 0 20px; height: 42px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-weight: 600; transition: 0.2s; }
+        .input-area button:hover { background: #4338ca; }
+        .input-area button:disabled { background: #64748b; cursor: not-allowed; opacity: 0.6; }
+
+        .auth-wrapper { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #0f172a; }
+        .auth-container { width: 100%; max-width: 420px; background: #1e293b; padding: 40px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.4); text-align: center; }
+        .auth-container h1 { margin-bottom: 25px; color: #f8fafc; font-size: 1.6rem; font-weight: 600; }
+        .auth-container input { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #f8fafc; outline: none; font-size: 0.95rem; }
+        .auth-container input:focus { border-color: #6366f1; }
+        .auth-container button[type="submit"] { width: 100%; padding: 14px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .auth-container button[type="submit"]:hover { background: #4338ca; }
+        .auth-container .switch-mode { margin-top: 25px; font-size: 0.9rem; color: #94a3b8; }
+        .auth-container .switch-mode span { color: #818cf8; font-weight: 600; cursor: pointer; }
+        .auth-container .switch-mode span:hover { text-decoration: underline; }
+        .error-msg { color: #f87171; margin-bottom: 15px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    {% verbatim %}
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const getPrivateRoomName = (user1, user2) => {
+            const encodeUser = (name) => btoa(name).replace(/[^a-zA-Z0-9]/g, '');
+            const users = [encodeUser(user1), encodeUser(user2)].sort();
+            return `prive-${users[0]}-${users[1]}`;
+        };
+
+        function Chat({ activeRoom, username, isPrivate, targetUser, onlineUsers, onSendMessage }) {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [status, setStatus] = useState('Connexion...');
+            const [isConnected, setIsConnected] = useState(false);
+            const [typingUsers, setTypingUsers] = useState([]);
+            const wsRef = useRef(null);
+            const messagesEndRef = useRef(null);
+            const typingTimeoutRef = useRef(null);
+
+            useEffect(() => {
+                setMessages([]); 
+                setIsConnected(false);
+                setTypingUsers([]);
+                
+                // JDID: Dynamic WebSocket URL for Localhost & Production (HTTP/HTTPS)
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const wsHost = window.location.host;
+                const ws = new WebSocket(`${wsProtocol}${wsHost}/ws/chat/${activeRoom}/`);
+                wsRef.current = ws;
+
+                ws.onopen = () => {
+                    setStatus('Connecté');
+                    setIsConnected(true);
+                };
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'history') {
+                        setMessages(data.messages);
+                    } else if (data.type === 'message') {
+                        setMessages((prev) => [...prev, data]);
+                    } else if (data.type === 'typing' && data.username !== username) {
+                        if (data.is_typing) {
+                            setTypingUsers(prev => [...new Set([...prev, data.username])]);
+                        } else {
+                            setTypingUsers(prev => prev.filter(u => u !== data.username));
+                        }
+                    }
+                };
+                ws.onerror = () => setStatus('Erreur');
+                ws.onclose = () => {
+                    setStatus('Déconnecté');
+                    setIsConnected(false);
+                };
+
+                return () => ws.close();
+            }, [activeRoom, username]);
+
+            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+            const handleTyping = (e) => {
+                setInput(e.target.value);
+                if (!isConnected) return;
+
+                wsRef.current.send(JSON.stringify({ type: 'typing', is_typing: true, username }));
+                
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => {
+                    wsRef.current.send(JSON.stringify({ type: 'typing', is_typing: false, username }));
+                }, 1500);
+            };
+
+            const sendMessage = () => {
+                if (!input.trim() || !isConnected) return;
+                if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+                
+                wsRef.current.send(JSON.stringify({ 
+                    type: 'chat_message',
+                    message: input, 
+                    username: username,
+                    receiver: isPrivate ? targetUser : null
+                }));
+                setInput('');
+                wsRef.current.send(JSON.stringify({ type: 'typing', is_typing: false, username }));
+                if (isPrivate && onSendMessage) onSendMessage(targetUser); 
+            };
+
+            const handleKey = (e) => { if (e.key === 'Enter') sendMessage(); };
+            
+            const isTargetOnline = isPrivate && onlineUsers.includes(targetUser);
+            const title = isPrivate ? targetUser : activeRoom;
+
+            return (
+                <div className="chat-section">
+                    <div className="chat-header">
+                        <h2>
+                            {title}
+                            {isPrivate && (
+                                <span style={{ fontSize: '0.8rem', color: isTargetOnline ? '#10b981' : '#64748b', fontWeight: '500' }}>
+                                    {isTargetOnline ? '🟢 En ligne' : '⚪ Hors ligne'}
+                                </span>
+                            )}
+                            {!isPrivate && <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '400', marginLeft: '10px' }}>• {status}</span>}
+                        </h2>
+                        <div className="subtitle">
+                            {typingUsers.length > 0 && (
+                                <span>{typingUsers.join(', ')} {typingUsers.length > 1 ? 'sont' : 'est'} en train d'écrire...</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="chat-area">
+                        {messages.length === 0 && <div style={{ textAlign: 'center', color: '#64748b', marginTop: '20px' }}>Aucun message pour l'instant.</div>}
+                        {messages.map((m, i) => {
+                            const isMine = m.username === username;
+                            return (
+                                <div key={i} className={`message-row ${isMine ? 'mine' : 'theirs'}`}>
+                                    <div className={`bubble ${isMine ? 'mine' : 'theirs'}`}>
+                                        {!isMine && <div className="sender">{m.username}</div>}
+                                        <div className="text">{m.message}</div>
+                                        <div className="time">{m.timestamp}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    <div className="input-area">
+                        <input 
+                            value={input} 
+                            onChange={handleTyping} 
+                            onKeyDown={handleKey} 
+                            placeholder="Écrivez un message..." 
+                        />
+                        <button onClick={sendMessage} disabled={!isConnected}>
+                            {isConnected ? 'Envoyer' : 'Connexion...'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [usersList, setUsersList] = useState([]);
+            const [checking, setChecking] = useState(true);
+            const [authMode, setAuthMode] = useState('login');
+            
+            const [activeRoom, setActiveRoom] = useState('general');
+            const [isPrivate, setIsPrivate] = useState(false);
+            const [targetUser, setTargetUser] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [onlineUsers, setOnlineUsers] = useState([]);
+
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const fetchUsers = () => {
+                fetch('/api/users/').then(res => res.json()).then(data => {
+                    if (data.users) setUsersList(data.users);
+                });
+            };
+
+            const moveToTop = (usernameToMove) => {
+                setUsersList(prev => {
+                    const newList = [...prev];
+                    const index = newList.indexOf(usernameToMove);
+                    if (index > -1) newList.splice(index, 1);
+                    newList.unshift(usernameToMove);
+                    return newList;
+                });
+            };
+
+            useEffect(() => {
+                if ("Notification" in window) {
+                    Notification.requestPermission();
+                }
+
+                fetch('/api/user/').then(res => res.json()).then(data => {
+                    if (data.username) {
+                        setCurrentUser(data.username);
+                        fetchUsers();
+                    }
+                    setChecking(false);
+                });
+            }, []);
+
+            useEffect(() => {
+                if (!currentUser) return;
+                let notifWs;
+                let reconnectTimeout;
+
+                const connectNotif = () => {
+                    // JDID: Dynamic WebSocket URL for Localhost & Production
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                    const wsHost = window.location.host;
+                    notifWs = new WebSocket(`${wsProtocol}${wsHost}/ws/notifications/`);
+                    
+                    notifWs.onmessage = (e) => {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'new_message') {
+                            moveToTop(data.sender);
+                            
+                            if (document.hidden && Notification.permission === "granted") {
+                                new Notification(`Nouveau message de ${data.sender}`, {
+                                    body: data.message || "Cliquez pour voir le message",
+                                    icon: "https://cdn-icons-png.flaticon.com/512/733/733585.png"
+                                });
+                            }
+                        } else if (data.type === 'user_status') {
+                            setOnlineUsers(data.online_users);
+                        }
+                    };
+                    notifWs.onclose = () => {
+                        reconnectTimeout = setTimeout(connectNotif, 2000);
+                    };
+                };
+
+                connectNotif();
+
+                return () => {
+                    if (notifWs) notifWs.close();
+                    clearTimeout(reconnectTimeout);
+                };
+            }, [currentUser]);
+
+            const handleAuth = (e) => {
+                e.preventDefault(); setError('');
+                const endpoint = authMode === 'login' ? '/api/login/' : '/api/register/';
+                const csrftoken = getCookie('csrftoken');
+                
+                fetch(endpoint, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ username, password })
+                }).then(async res => {
+                    const data = await res.json();
+                    if (res.ok) { 
+                        setCurrentUser(data.username); 
+                        setUsername(''); setPassword(''); 
+                        fetchUsers(); 
+                    } else { setError(data.error || 'Une erreur est survenue.'); }
+                });
+            };
+
+            const handleLogout = () => {
+                const csrftoken = getCookie('csrftoken');
+                fetch('/api/logout/', { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+                    .then(() => { setCurrentUser(null); setUsersList([]); });
+            };
+
+            const openPrivateChat = (user) => {
+                const roomName = getPrivateRoomName(currentUser, user);
+                setActiveRoom(roomName);
+                setTargetUser(user);
+                setIsPrivate(true);
+                moveToTop(user);
+            };
+
+            const openGeneralChat = () => {
+                setActiveRoom('general');
+                setTargetUser(null);
+                setIsPrivate(false);
+            };
+
+            if (checking) return <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white'}}>Chargement...</div>;
+
+            if (!currentUser) {
+                return (
+                    <div className="auth-wrapper">
+                        <div className="auth-container">
+                            <h1>{authMode === 'login' ? 'Connexion' : 'Créer un compte'}</h1>
+                            {error && <p className="error-msg">{error}</p>}
+                            <form onSubmit={handleAuth}>
+                                <input type="text" placeholder="Nom d'utilisateur" value={username} onChange={e => setUsername(e.target.value)} required />
+                                <input type="password" placeholder="Mot de passe" value={password} onChange={e => setPassword(e.target.value)} required />
+                                <button type="submit">{authMode === 'login' ? 'Se connecter' : "S'inscrire"}</button>
+                            </form>
+                            <p className="switch-mode">
+                                {authMode === 'login' ? "Pas de compte ? " : "Déjà un compte ? "}
+                                <span onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setError(''); }}>
+                                    {authMode === 'login' ? 'Créer un compte' : 'Se connecter'}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const filteredUsers = usersList
+                .filter(u => u.toLowerCase().includes(searchQuery.toLowerCase()))
+                .sort((a, b) => {
+                    const aOnline = onlineUsers.includes(a);
+                    const bOnline = onlineUsers.includes(b);
+                    if (aOnline && !bOnline) return -1;
+                    if (!aOnline && bOnline) return 1;
+                    return 0; 
+                });
+
+            return (
+                <div className="app-layout">
+                    <div className="sidebar">
+                        <div className="sidebar-header">
+                            <h2>Messages</h2>
+                            <button onClick={handleLogout}>Déco</button>
+                        </div>
+                        <div className="sidebar-content">
+                            <div className="search-box">
+                                <input 
+                                    type="text" 
+                                    placeholder="Rechercher..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+
+                            <div className={`contact general ${!isPrivate ? 'active' : ''}`} onClick={openGeneralChat}>
+                                <div className="avatar">#</div>
+                                <div className="name">Salle Générale</div>
+                            </div>
+                            
+                            <div className="section-title">Messages Privés</div>
+                            
+                            {filteredUsers.length === 0 && (
+                                <p style={{ padding: '10px 12px', color: '#64748b', fontSize: '0.85rem' }}>Aucun utilisateur trouvé.</p>
+                            )}
+
+                            {filteredUsers.map(u => {
+                                const isOnline = onlineUsers.includes(u);
+                                return (
+                                    <div key={u} className={`contact ${isPrivate && targetUser === u ? 'active' : ''}`} onClick={() => openPrivateChat(u)}>
+                                        <div className="avatar">{u.charAt(0).toUpperCase()}</div>
+                                        <div className="name">{u}</div>
+                                        <div className={`status-dot ${isOnline ? 'online' : 'offline'}`}></div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <Chat 
+                        activeRoom={activeRoom} 
+                        username={currentUser} 
+                        isPrivate={isPrivate} 
+                        targetUser={targetUser} 
+                        onlineUsers={onlineUsers}
+                        onSendMessage={moveToTop}
+                    />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    {% endverbatim %}
+</body>
+</html>
